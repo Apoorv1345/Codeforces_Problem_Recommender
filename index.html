@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Codeforces Recommender (FastAPI + NeuCF)</title>
+  <style>
+    body {
+      font-family: Inter, Arial, sans-serif;
+      background: #f7fafc;
+      padding: 40px;
+      display: flex;
+      justify-content: center;
+    }
+    .card {
+      width: 780px;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 6px 24px rgba(0,0,0,0.08);
+    }
+    input, button {
+      font-size: 16px;
+      padding: 10px;
+    }
+    .row { display: flex; gap: 8px; }
+    .result { margin-top: 16px; }
+    a { color: #0b6cff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .small { font-size: 13px; color: #666; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Codeforces Problem Recommender (NeuCF)</h2>
+    <div class="row">
+      <input id="handle" placeholder="Enter Codeforces handle (e.g. tourist)" style="flex:1;" />
+      <button id="btn" onclick="getRecs()">Get</button>
+    </div>
+    <div class="small" style="margin-top:8px;">
+      Backend: FastAPI + NeuCF • Local dev
+    </div>
+    <div id="out" class="result"></div>
+  </div>
+
+  <script>
+    async function getRecs() {
+      const out = document.getElementById('out');
+      const handle = document.getElementById('handle').value.trim();
+      if (!handle) {
+        out.innerHTML = '<div style="color:#b32;">Enter a handle</div>';
+        return;
+      }
+      out.innerHTML = '<div>Loading…</div>';
+      try {
+        const res = await fetch(`http://127.0.0.1:8000/recommend?handle=${encodeURIComponent(handle)}&k=10`);
+        const data = await res.json();
+        if (!res.ok) {
+          out.innerHTML = `<div style="color:#b32">${data.detail || 'Unknown error'}</div>`;
+          return;
+        }
+        if (!data.recommended || data.recommended.length === 0) {
+          out.innerHTML = '<div>No recommendations found.</div>';
+          return;
+        }
+
+        let html = '<ol>';
+        for (const p of data.recommended) {
+          const link = `https://codeforces.com/problemset/problem/${p.contestId}/${p.index}`;
+          html += `<li style="margin:8px 0">
+            <a href="${link}" target="_blank" rel="noreferrer"><strong>${p.name}</strong></a>
+            <div class="small">
+              Rating: ${p.rating ?? 'N/A'} • Tags: ${(p.tags||[]).join(', ')} • Score: ${p.score.toFixed(3)}
+            </div>
+          </li>`;
+        }
+        html += '</ol>';
+        out.innerHTML = html;
+      } catch (e) {
+        out.innerHTML = `<div style="color:#b32">Request failed: ${e.message}</div>`;
+      }
+    }
+  </script>
+</body>
+</html>
